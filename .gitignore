@@ -1,6 +1,4 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
-
-# dependencies
+# Dependencies
 node_modules/
 
 # Expo
@@ -9,35 +7,71 @@ dist/
 web-build/
 expo-env.d.ts
 
-# Native
+# Native build outputs
+/ios/
+/android/
 .kotlin/
+
+# Expo EAS
+.easignore
+
+# Native artifacts
 *.orig.*
 *.jks
 *.p8
 *.p12
 *.key
 *.mobileprovision
+*.pem
 
 # Metro
 .metro-health-check*
 
-# debug
+# Debug logs
 npm-debug.*
 yarn-debug.*
 yarn-error.*
 
 # macOS
 .DS_Store
-*.pem
+.AppleDouble
+.LSOverride
 
-# local env files
-.env*.local
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
 
-# typescript
+# Linux
+*~
+.nfs*
+
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*.sublime-workspace
+*.sublime-project
+
+# Claude / AI assistant
+.claude/
+
+# TypeScript
 *.tsbuildinfo
 
-example
+# Environment variables
+.env
+.env.local
+.env.*.local
 
-# generated native folders
-/ios
-/android
+# Build output
+example/
+
+# Office documents (not needed in repo)
+*.docx
+*.doc
+*.xlsx
+
+# System
+*.log

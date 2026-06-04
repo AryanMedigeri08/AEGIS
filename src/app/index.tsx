@@ -1,98 +1,151 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, Animated } from 'react-native';
+import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
+import { theme } from '@/constants/theme';
+import { storage } from '@/services/storage';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+const STATUS_MESSAGES = [
+  'Loading offline modules...',
+  'Initialising face detection...',
+  'Ready',
+];
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
+export default function SplashScreen() {
+  const [statusIndex, setStatusIndex] = useState(0);
+  const progressAnim = useRef(new Animated.Value(0)).current;
+  const iconScaleAnim = useRef(new Animated.Value(0)).current;
+  const iconOpacityAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Animate Shield Icon
+    Animated.parallel([
+      Animated.spring(iconScaleAnim, {
+        toValue: 1,
+        tension: 40,
+        friction: 5,
+        useNativeDriver: true,
+      }),
+      Animated.timing(iconOpacityAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Animate Progress Bar
+    Animated.timing(progressAnim, {
+      toValue: 1,
+      duration: 2000,
+      useNativeDriver: false,
+    }).start();
+
+    // Cycle Status Messages
+    const interval = setInterval(() => {
+      setStatusIndex((prev) => (prev < STATUS_MESSAGES.length - 1 ? prev + 1 : prev));
+    }, 700);
+
+    // Initialisation Check
+    const checkInit = async () => {
+      // Minimum display time for effect
+      await new Promise(resolve => setTimeout(resolve, 2500));
+      
+      try {
+        const session = await storage.getSession();
+        if (session) {
+          router.replace('/(tabs)/home');
+        } else {
+          router.replace('/login');
+        }
+      } catch (e) {
+        console.error('Failed to read session during startup', e);
+        router.replace('/login');
+      }
+    };
+
+    checkInit();
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const progressWidth = progressAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0%', '100%'],
+  });
+
   return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+    <SafeAreaView style={styles.container}>
+      <StatusBar style="light" />
+      
+      <View style={styles.centerContent}>
+        <Animated.Text 
+          style={[
+            styles.icon,
+            { 
+              transform: [{ scale: iconScaleAnim }],
+              opacity: iconOpacityAnim 
+            }
+          ]}
+        >
+          🛡️
+        </Animated.Text>
+        <Text style={styles.title}>AEGIS</Text>
+        <Text style={styles.subtitle}>Secure Offline Authentication</Text>
 
-export default function HomeScreen() {
-  return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
-
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+        <View style={styles.progressContainer}>
+          <Animated.View style={[styles.progressBar, { width: progressWidth }]} />
+        </View>
+        <Text style={styles.statusText}>{STATUS_MESSAGES[statusIndex]}</Text>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: theme.colors.background,
     justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
     alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
   },
-  heroSection: {
+  centerContent: {
     alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
+    width: '80%',
+  },
+  icon: {
+    fontSize: 72,
+    marginBottom: theme.spacing.lg,
   },
   title: {
-    textAlign: 'center',
+    color: theme.colors.primary,
+    fontSize: theme.typography.display.fontSize,
+    fontWeight: theme.typography.display.fontWeight,
+    letterSpacing: theme.typography.display.letterSpacing,
+    marginBottom: theme.spacing.sm,
   },
-  code: {
-    textTransform: 'uppercase',
+  subtitle: {
+    color: theme.colors.textSecondary,
+    fontSize: theme.typography.body.fontSize,
+    letterSpacing: theme.typography.body.letterSpacing,
+    marginBottom: theme.spacing.xxxl,
   },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
+  progressContainer: {
+    width: '100%',
+    height: 4,
+    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: theme.borderRadius.full,
+    overflow: 'hidden',
+    marginBottom: theme.spacing.md,
+  },
+  progressBar: {
+    height: '100%',
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.borderRadius.full,
+  },
+  statusText: {
+    color: theme.colors.textDisabled,
+    fontSize: theme.typography.caption.fontSize,
+    fontFamily: theme.typography.mono.fontFamily,
   },
 });
